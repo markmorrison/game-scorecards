@@ -1,0 +1,23 @@
+.field {
+  box-sizing: border-box;
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  border: var(--border-width) solid var(--color-border);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field:focus-visible {
+  outline: none;
+  border-color: var(--game-accent-strong, var(--game-accent));
+  box-shadow: 0 0 0 3px
+    color-mix(
+      in srgb,
+      var(--game-accent-strong, var(--game-accent)) 25%,
+      transparent
+    );
+}

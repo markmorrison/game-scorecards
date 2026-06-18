@@ -1,11 +1,14 @@
-import { LitElement, html, css, nothing } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { LitElement, html, nothing, unsafeCSS } from 'lit';
+import { customElement, query, state } from 'lit/decorators.js';
 import '../../shared/components/sc-button.js';
+import { formFieldStyles } from '../../shared/styles/form-field.styles.js';
 import { loadState, saveState } from '../../shared/storage.js';
+import styles from './uno-game.css?inline';
 import {
   createEmptyGame,
-  leaderId,
-  totalsFor,
+  nextDealerId,
+  standingsFor,
+  winnerFor,
   type UnoGameState,
 } from './uno-types.js';
 
@@ -13,245 +16,23 @@ const STORAGE_KEY = 'uno-scorecard';
 
 @customElement('uno-game')
 export class UnoGame extends LitElement {
-  static styles = css`
-    :host {
-      display: block;
-      --game-accent: #e8222c;
-      --game-accent-contrast: #ffffff;
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: var(--space-6);
-    }
-
-    .wordmark {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-2);
-      font-size: var(--font-size-xl);
-      font-weight: 800;
-      font-style: italic;
-    }
-
-    .badge {
-      display: inline-block;
-      background: var(--game-accent);
-      color: var(--game-accent-contrast);
-      padding: var(--space-1) var(--space-3);
-      border-radius: var(--radius-sm);
-    }
-
-    section {
-      margin-bottom: var(--space-6);
-    }
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: var(--space-3);
-    }
-
-    .section-title {
-      font-size: var(--font-size-sm);
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--color-text-muted);
-    }
-
-    .players {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-3);
-    }
-
-    .player-chip {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--space-1);
-      padding: var(--space-3) var(--space-4);
-      border-radius: var(--radius);
-      border: var(--border-width) solid var(--color-border);
-      background: var(--color-surface);
-      min-width: 96px;
-    }
-
-    .player-chip.leader {
-      border-color: var(--game-accent);
-      border-width: 2px;
-    }
-
-    .player-name {
-      font-size: var(--font-size-sm);
-      display: flex;
-      align-items: center;
-      gap: var(--space-1);
-      border: none;
-      background: transparent;
-      text-align: center;
-      color: var(--color-text);
-      font-family: inherit;
-      width: 100%;
-    }
-
-    .player-total {
-      font-size: var(--font-size-lg);
-      font-weight: 700;
-    }
-
-    .player-total.leader {
-      color: var(--game-accent);
-    }
-
-    .remove-player {
-      position: absolute;
-      top: -8px;
-      right: -8px;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      border: var(--border-width) solid var(--color-border);
-      background: var(--color-surface);
-      color: var(--color-text-muted);
-      font-size: 12px;
-      line-height: 1;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: var(--font-size-sm);
-    }
-
-    th,
-    td {
-      padding: var(--space-2) var(--space-3);
-      text-align: center;
-      border-bottom: var(--border-width) solid var(--color-border);
-    }
-
-    th:first-child,
-    td:first-child {
-      text-align: left;
-      color: var(--color-text-muted);
-    }
-
-    td.leader-cell {
-      color: var(--game-accent);
-      font-weight: 700;
-    }
-
-    .empty-rounds {
-      color: var(--color-text-muted);
-      font-size: var(--font-size-sm);
-      padding: var(--space-3) 0;
-    }
-
-    .round-form {
-      margin-top: var(--space-4);
-      padding: var(--space-4);
-      border-radius: var(--radius);
-      border: var(--border-width) solid var(--color-border);
-      background: var(--color-surface);
-    }
-
-    .round-form-grid {
-      display: grid;
-      gap: var(--space-3);
-      margin-bottom: var(--space-4);
-    }
-
-    .round-form-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-3);
-    }
-
-    .round-form-row label {
-      font-size: var(--font-size-sm);
-    }
-
-    .round-form-row input {
-      width: 96px;
-      padding: var(--space-2) var(--space-3);
-      border-radius: var(--radius-sm);
-      border: var(--border-width) solid var(--color-border);
-      font-size: var(--font-size-base);
-      text-align: right;
-    }
-
-    .round-form-actions {
-      display: flex;
-      gap: var(--space-2);
-    }
-
-    .add-player-form {
-      display: flex;
-      gap: var(--space-2);
-      align-items: center;
-    }
-
-    .add-player-form input {
-      padding: var(--space-2) var(--space-3);
-      border-radius: var(--radius-sm);
-      border: var(--border-width) solid var(--color-border);
-      font-size: var(--font-size-sm);
-      width: 140px;
-    }
-
-    .target-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-top: var(--space-4);
-      border-top: var(--border-width) solid var(--color-border);
-      color: var(--color-text-muted);
-      font-size: var(--font-size-sm);
-    }
-
-    .target-row input {
-      width: 80px;
-      padding: var(--space-1) var(--space-2);
-      border-radius: var(--radius-sm);
-      border: var(--border-width) solid var(--color-border);
-      text-align: right;
-      font-size: var(--font-size-sm);
-    }
-
-    .winner-banner {
-      background: var(--game-accent);
-      color: var(--game-accent-contrast);
-      padding: var(--space-4);
-      border-radius: var(--radius);
-      margin-bottom: var(--space-6);
-      font-weight: 700;
-      text-align: center;
-    }
-  `;
+  static styles = [formFieldStyles, unsafeCSS(styles)];
 
   @state() private game: UnoGameState = createEmptyGame();
-  @state() private addingRound = false;
-  @state() private addingPlayer = false;
   @state() private roundDraft: Record<string, number> = {};
-  @state() private newPlayerName = '';
+  @state() private editingRoundIndex: number | null = null;
+
+  @query('#round-dialog') private roundDialog!: HTMLDialogElement;
+  @query('#settings-dialog') private settingsDialog!: HTMLDialogElement;
 
   connectedCallback() {
     super.connectedCallback();
     const stored = loadState<UnoGameState>(STORAGE_KEY);
     if (stored) {
-      this.game = stored;
+      this.game = {
+        ...stored,
+        dealerId: stored.dealerId ?? stored.players[0]?.id ?? null,
+      };
     }
   }
 
@@ -271,20 +52,20 @@ export class UnoGame extends LitElement {
     this.persist();
   }
 
-  private openAddPlayer() {
-    this.addingPlayer = true;
-    this.newPlayerName = '';
-  }
-
-  private confirmAddPlayer() {
-    const name = this.newPlayerName.trim();
-    if (!name) {
-      this.addingPlayer = false;
-      return;
-    }
-    this.game.players.push({ id: crypto.randomUUID(), name });
-    this.addingPlayer = false;
+  private addPlayer() {
+    const id = crypto.randomUUID();
+    this.game.players.push({
+      id,
+      name: `Player ${this.game.players.length + 1}`,
+    });
     this.persist();
+    this.updateComplete.then(() => {
+      const input = this.renderRoot.querySelector<HTMLInputElement>(
+        `input[data-player-id="${id}"]`
+      );
+      input?.focus();
+      input?.select();
+    });
   }
 
   private removePlayer(id: string) {
@@ -292,6 +73,9 @@ export class UnoGame extends LitElement {
     this.game.players = this.game.players.filter((p) => p.id !== id);
     for (const round of this.game.rounds) {
       delete round.scores[id];
+    }
+    if (this.game.dealerId === id) {
+      this.game.dealerId = this.game.players[0].id;
     }
     this.persist();
   }
@@ -303,20 +87,49 @@ export class UnoGame extends LitElement {
   }
 
   private openAddRound() {
+    this.editingRoundIndex = null;
     this.roundDraft = Object.fromEntries(
       this.game.players.map((p) => [p.id, 0])
     );
-    this.addingRound = true;
+    this.openRoundDialog();
+  }
+
+  private openEditRound(index: number) {
+    this.editingRoundIndex = index;
+    this.roundDraft = { ...this.game.rounds[index].scores };
+    this.openRoundDialog();
+  }
+
+  private openRoundDialog() {
+    this.roundDialog.showModal();
+    this.updateComplete.then(() => {
+      this.roundDialog.querySelector('input')?.focus();
+    });
   }
 
   private cancelAddRound() {
-    this.addingRound = false;
+    this.roundDialog.close();
   }
 
   private saveRound() {
-    this.game.rounds.push({ scores: { ...this.roundDraft } });
-    this.addingRound = false;
+    if (this.editingRoundIndex === null) {
+      this.game.rounds.push({ scores: { ...this.roundDraft } });
+      this.game.dealerId = nextDealerId(this.game);
+    } else {
+      this.game.rounds[this.editingRoundIndex] = {
+        scores: { ...this.roundDraft },
+      };
+    }
+    this.roundDialog.close();
     this.persist();
+  }
+
+  private openSettings() {
+    this.settingsDialog.showModal();
+  }
+
+  private closeSettings() {
+    this.settingsDialog.close();
   }
 
   private updateTargetScore(value: string) {
@@ -326,180 +139,265 @@ export class UnoGame extends LitElement {
   }
 
   render() {
-    const totals = totalsFor(this.game);
-    const leader = leaderId(this.game);
-    const winner = this.game.players.find(
-      (p) => (totals[p.id] ?? 0) >= this.game.targetScore && leader === p.id
-    );
+    const standings = standingsFor(this.game);
+    const winner = winnerFor(this.game);
+    const hasRounds = this.game.rounds.length > 0;
 
     return html`
       <header>
         <span class="wordmark"><span class="badge">UNO</span> Scorecard</span>
-        <sc-button variant="secondary" @click=${this.startNewGame}
-          >New Game</sc-button
-        >
+        <div class="header-actions">
+          <button
+            class="icon-button"
+            aria-label="Game settings"
+            title="Game settings"
+            @click=${this.openSettings}
+          >
+            ⚙
+          </button>
+          <sc-button variant="secondary" @click=${this.startNewGame}
+            >New Game</sc-button
+          >
+        </div>
       </header>
 
       ${winner
         ? html`<div class="winner-banner">
-            🎉 ${winner.name} wins with ${totals[winner.id]} points!
+            🎉 ${winner.name} wins with ${standings[0].total} points!
           </div>`
         : nothing}
 
-      <section>
+      <section class="standings-section">
         <div class="section-header">
-          <span class="section-title">Players</span>
-          ${!this.addingPlayer
-            ? html`<sc-button variant="ghost" @click=${this.openAddPlayer}
-                >+ Add Player</sc-button
-              >`
-            : nothing}
+          <span class="section-title">Standings</span>
+          <button
+            class="icon-button"
+            aria-label="Add player"
+            title="Add player"
+            @click=${this.addPlayer}
+          >
+            +
+          </button>
         </div>
 
-        ${this.addingPlayer
-          ? html`
-              <div class="add-player-form">
-                <input
-                  type="text"
-                  placeholder="Player name"
-                  .value=${this.newPlayerName}
-                  @input=${(e: InputEvent) =>
-                    (this.newPlayerName = (
-                      e.target as HTMLInputElement
-                    ).value)}
-                  @keydown=${(e: KeyboardEvent) => {
-                    if (e.key === 'Enter') this.confirmAddPlayer();
-                    if (e.key === 'Escape') (this.addingPlayer = false);
-                  }}
-                />
-                <sc-button @click=${this.confirmAddPlayer}>Add</sc-button>
-              </div>
-            `
-          : nothing}
-
-        <div class="players" style="margin-top: var(--space-3)">
-          ${this.game.players.map((player) => {
-            const isLeader = player.id === leader;
-            return html`
-              <div class="player-chip ${isLeader ? 'leader' : ''}">
-                ${this.game.players.length > 2
-                  ? html`<button
-                      class="remove-player"
-                      title="Remove player"
-                      @click=${() => this.removePlayer(player.id)}
-                    >
-                      ×
-                    </button>`
-                  : nothing}
-                <input
-                  class="player-name"
-                  .value=${player.name}
-                  @change=${(e: Event) =>
-                    this.renamePlayer(
-                      player.id,
-                      (e.target as HTMLInputElement).value
-                    )}
-                />
-                <span class="player-total ${isLeader ? 'leader' : ''}"
-                  >${totals[player.id] ?? 0}</span
-                >
-              </div>
-            `;
-          })}
+        <div class="standings-card">
+          <table class="standings-table">
+            <caption class="sr-only">
+              Player standings, sorted lowest score first
+            </caption>
+            <thead>
+              <tr>
+                <th class="place-col" scope="col">Place</th>
+                <th scope="col">Player</th>
+                <th class="score-col" scope="col">Score</th>
+                <th class="action-col" scope="col">
+                  <span class="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              ${standings.map(({ player, total }, index) => {
+                const isLeader = hasRounds && index === 0;
+                const isDealer = player.id === this.game.dealerId;
+                return html`
+                  <tr class=${isLeader ? 'leader-row' : ''}>
+                    <td class="place-cell">
+                      ${index + 1}
+                      ${isDealer
+                        ? html`<span
+                              class="dealer-icon"
+                              aria-hidden="true"
+                              title="Dealer"
+                              >★</span
+                            ><span class="sr-only">Dealer</span>`
+                        : nothing}
+                    </td>
+                    <td class="name-cell">
+                      <input
+                        class="player-name"
+                        aria-label="Player name"
+                        data-player-id=${player.id}
+                        .value=${player.name}
+                        @change=${(e: Event) =>
+                          this.renamePlayer(
+                            player.id,
+                            (e.target as HTMLInputElement).value
+                          )}
+                      />
+                    </td>
+                    <td class="score-cell">${total}</td>
+                    <td class="action-cell">
+                      ${this.game.players.length > 2
+                        ? html`<button
+                            class="icon-button icon-button-sm"
+                            aria-label="Remove ${player.name}"
+                            title="Remove ${player.name}"
+                            @click=${() => this.removePlayer(player.id)}
+                          >
+                            ×
+                          </button>`
+                        : nothing}
+                    </td>
+                </tr>
+              `;
+            })}
+            </tbody>
+          </table>
         </div>
       </section>
 
-      <section>
+      <section class="history-section">
         <div class="section-header">
           <span class="section-title">Rounds</span>
+          <button
+            class="icon-button"
+            aria-label="Add round"
+            title="Add round"
+            @click=${this.openAddRound}
+          >
+            +
+          </button>
         </div>
 
         ${this.game.rounds.length === 0
-          ? html`<p class="empty-rounds">No rounds yet. Add one below.</p>`
+          ? html`<p class="empty-rounds">No rounds yet. Add one above.</p>`
           : html`
-              <table>
-                <thead>
-                  <tr>
-                    <th>Round</th>
-                    ${this.game.players.map(
-                      (p) => html`<th>${p.name}</th>`
+              <div class="history-card">
+                <table class="history-table">
+                  <caption class="sr-only">
+                    Score by round for each player
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Round</th>
+                      ${this.game.players.map(
+                        (p) => html`<th scope="col">${p.name}</th>`
+                      )}
+                      <th scope="col"><span class="sr-only">Edit</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${this.game.rounds.map(
+                      (round, i) => html`
+                        <tr>
+                          <td>${i + 1}</td>
+                          ${this.game.players.map((p) => {
+                            const score = round.scores[p.id] ?? 0;
+                            const isLeader =
+                              hasRounds && standings[0]?.player.id === p.id;
+                            return html`<td
+                              class=${isLeader ? 'leader-cell' : ''}
+                            >
+                              ${score}
+                            </td>`;
+                          })}
+                          <td>
+                            <button
+                              class="icon-button icon-button-sm"
+                              aria-label="Edit round ${i + 1}"
+                              title="Edit round ${i + 1}"
+                              @click=${() => this.openEditRound(i)}
+                            >
+                              ✎
+                            </button>
+                          </td>
+                        </tr>
+                      `
                     )}
-                  </tr>
-                </thead>
-                <tbody>
-                  ${this.game.rounds.map(
-                    (round, i) => html`
-                      <tr>
-                        <td>${i + 1}</td>
-                        ${this.game.players.map((p) => {
-                          const score = round.scores[p.id] ?? 0;
-                          const isLeader = p.id === leader;
-                          return html`<td class=${isLeader ? 'leader-cell' : ''}>
-                            ${score}
-                          </td>`;
-                        })}
-                      </tr>
-                    `
-                  )}
-                </tbody>
-              </table>
-            `}
-
-        ${this.addingRound
-          ? html`
-              <div class="round-form">
-                <div class="round-form-grid">
-                  ${this.game.players.map(
-                    (p) => html`
-                      <div class="round-form-row">
-                        <label for="round-${p.id}">${p.name}</label>
-                        <input
-                          id="round-${p.id}"
-                          type="number"
-                          inputmode="numeric"
-                          .value=${String(this.roundDraft[p.id] ?? 0)}
-                          @input=${(e: InputEvent) => {
-                            const value = parseInt(
-                              (e.target as HTMLInputElement).value,
-                              10
-                            );
-                            this.roundDraft = {
-                              ...this.roundDraft,
-                              [p.id]: Number.isFinite(value) ? value : 0,
-                            };
-                          }}
-                        />
-                      </div>
-                    `
-                  )}
-                </div>
-                <div class="round-form-actions">
-                  <sc-button @click=${this.saveRound}>Save Round</sc-button>
-                  <sc-button variant="secondary" @click=${this.cancelAddRound}
-                    >Cancel</sc-button
-                  >
-                </div>
+                  </tbody>
+                </table>
               </div>
-            `
-          : html`
-              <sc-button
-                variant="secondary"
-                style="margin-top: var(--space-3); width: 100%"
-                @click=${this.openAddRound}
-                >+ Add Round</sc-button
-              >
             `}
       </section>
 
-      <div class="target-row">
-        <span>Target score</span>
-        <input
-          type="number"
-          .value=${String(this.game.targetScore)}
-          @change=${(e: Event) =>
-            this.updateTargetScore((e.target as HTMLInputElement).value)}
-        />
-      </div>
+      <dialog
+        id="round-dialog"
+        class="dialog"
+        aria-labelledby="round-dialog-title"
+      >
+        <h2 class="dialog-title" id="round-dialog-title">
+          Round
+          ${this.editingRoundIndex === null
+            ? this.game.rounds.length + 1
+            : this.editingRoundIndex + 1}
+        </h2>
+        <div class="round-form-grid">
+          ${this.game.players.map(
+            (p, index) => html`
+              <div class="round-form-row">
+                <label for="round-${p.id}">${p.name}</label>
+                <input
+                  id="round-${p.id}"
+                  class="field"
+                  type="number"
+                  inputmode="numeric"
+                  .value=${String(this.roundDraft[p.id] ?? 0)}
+                  @input=${(e: InputEvent) => {
+                    const value = parseInt(
+                      (e.target as HTMLInputElement).value,
+                      10
+                    );
+                    this.roundDraft = {
+                      ...this.roundDraft,
+                      [p.id]: Number.isFinite(value) ? value : 0,
+                    };
+                  }}
+                  @keydown=${(e: KeyboardEvent) => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    const isLast = index === this.game.players.length - 1;
+                    if (isLast) {
+                      this.saveRound();
+                      return;
+                    }
+                    const nextPlayer = this.game.players[index + 1];
+                    const nextInput =
+                      this.roundDialog.querySelector<HTMLInputElement>(
+                        `#round-${nextPlayer.id}`
+                      );
+                    nextInput?.focus();
+                    nextInput?.select();
+                  }}
+                />
+              </div>
+            `
+          )}
+        </div>
+        <div class="round-form-actions">
+          <sc-button @click=${this.saveRound}
+            >${this.editingRoundIndex === null
+              ? 'Save Round'
+              : 'Save Changes'}</sc-button
+          >
+          <sc-button variant="secondary" @click=${this.cancelAddRound}
+            >Cancel</sc-button
+          >
+        </div>
+      </dialog>
+
+      <dialog
+        id="settings-dialog"
+        class="dialog settings-dialog"
+        aria-labelledby="settings-dialog-title"
+      >
+        <h2 class="dialog-title" id="settings-dialog-title">
+          Game Settings
+        </h2>
+        <div class="round-form-row">
+          <label for="target-score">Target score</label>
+          <input
+            id="target-score"
+            class="field"
+            type="number"
+            .value=${String(this.game.targetScore)}
+            @change=${(e: Event) =>
+              this.updateTargetScore((e.target as HTMLInputElement).value)}
+          />
+        </div>
+        <div class="round-form-actions" style="margin-top: var(--space-4)">
+          <sc-button @click=${this.closeSettings}>Done</sc-button>
+        </div>
+      </dialog>
     `;
   }
 }

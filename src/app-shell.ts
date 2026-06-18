@@ -1,22 +1,12 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, unsafeCSS } from 'lit';
 import { customElement, query } from 'lit/decorators.js';
 import { Router } from '@vaadin/router';
 import { routes } from './router/routes.js';
+import styles from './app-shell.css?inline';
 
 @customElement('app-shell')
 export class AppShell extends LitElement {
-  static styles = css`
-    :host {
-      display: block;
-      min-height: 100vh;
-    }
-
-    main {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: var(--space-5) var(--space-4);
-    }
-  `;
+  static styles = unsafeCSS(styles);
 
   @query('#outlet') outlet!: HTMLElement;
 
