@@ -13,7 +13,7 @@ const GAMES: GameEntry[] = [
   {
     slug: 'uno',
     name: 'Uno',
-    accent: '#e8222c',
+    accent: '#f2670d',
     description: 'Track round scores and crown a winner at the target score.',
   },
 ];

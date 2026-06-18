@@ -142,6 +142,7 @@ export class UnoGame extends LitElement {
     const standings = standingsFor(this.game);
     const winner = winnerFor(this.game);
     const hasRounds = this.game.rounds.length > 0;
+    const canRemovePlayers = this.game.players.length > 2;
 
     return html`
       <header>
@@ -187,31 +188,30 @@ export class UnoGame extends LitElement {
             </caption>
             <thead>
               <tr>
-                <th class="place-col" scope="col">Place</th>
+                <th class="place-col" scope="col">#</th>
                 <th scope="col">Player</th>
                 <th class="score-col" scope="col">Score</th>
-                <th class="action-col" scope="col">
-                  <span class="sr-only">Actions</span>
-                </th>
+                ${canRemovePlayers
+                  ? html`<th class="action-col" scope="col">
+                      <span class="sr-only">Actions</span>
+                    </th>`
+                  : nothing}
               </tr>
             </thead>
             <tbody>
               ${standings.map(({ player, total }, index) => {
                 const isLeader = hasRounds && index === 0;
                 const isDealer = player.id === this.game.dealerId;
+                const behind = total - standings[0].total;
+                const rowClasses = [
+                  isLeader ? 'leader-row' : '',
+                  isDealer ? 'dealer-row' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ');
                 return html`
-                  <tr class=${isLeader ? 'leader-row' : ''}>
-                    <td class="place-cell">
-                      ${index + 1}
-                      ${isDealer
-                        ? html`<span
-                              class="dealer-icon"
-                              aria-hidden="true"
-                              title="Dealer"
-                              >★</span
-                            ><span class="sr-only">Dealer</span>`
-                        : nothing}
-                    </td>
+                  <tr class=${rowClasses}>
+                    <td class="place-cell">${index + 1}</td>
                     <td class="name-cell">
                       <input
                         class="player-name"
@@ -224,20 +224,29 @@ export class UnoGame extends LitElement {
                             (e.target as HTMLInputElement).value
                           )}
                       />
+                      ${hasRounds
+                        ? isLeader
+                          ? html`<div class="status-line status-leading">
+                              ★ Leading
+                            </div>`
+                          : html`<div class="status-line status-behind">
+                              +${behind} behind
+                            </div>`
+                        : nothing}
                     </td>
                     <td class="score-cell">${total}</td>
-                    <td class="action-cell">
-                      ${this.game.players.length > 2
-                        ? html`<button
+                    ${canRemovePlayers
+                      ? html`<td class="action-cell">
+                          <button
                             class="icon-button icon-button-sm"
                             aria-label="Remove ${player.name}"
                             title="Remove ${player.name}"
                             @click=${() => this.removePlayer(player.id)}
                           >
                             ×
-                          </button>`
-                        : nothing}
-                    </td>
+                          </button>
+                        </td>`
+                      : nothing}
                 </tr>
               `;
             })}
@@ -249,27 +258,19 @@ export class UnoGame extends LitElement {
       <section class="history-section">
         <div class="section-header">
           <span class="section-title">Rounds</span>
-          <button
-            class="icon-button"
-            aria-label="Add round"
-            title="Add round"
-            @click=${this.openAddRound}
-          >
-            +
-          </button>
         </div>
 
-        ${this.game.rounds.length === 0
-          ? html`<p class="empty-rounds">No rounds yet. Add one above.</p>`
-          : html`
-              <div class="history-card">
+        <div class="history-card">
+          ${this.game.rounds.length === 0
+            ? html`<p class="empty-rounds">No rounds yet. Add one below.</p>`
+            : html`
                 <table class="history-table">
                   <caption class="sr-only">
                     Score by round for each player
                   </caption>
                   <thead>
                     <tr>
-                      <th scope="col">Round</th>
+                      <th scope="col">Rnd</th>
                       ${this.game.players.map(
                         (p) => html`<th scope="col">${p.name}</th>`
                       )}
@@ -277,16 +278,17 @@ export class UnoGame extends LitElement {
                     </tr>
                   </thead>
                   <tbody>
-                    ${this.game.rounds.map(
-                      (round, i) => html`
+                    ${this.game.rounds.map((round, i) => {
+                      const roundLow = Math.min(
+                        ...Object.values(round.scores)
+                      );
+                      return html`
                         <tr>
                           <td>${i + 1}</td>
                           ${this.game.players.map((p) => {
                             const score = round.scores[p.id] ?? 0;
-                            const isLeader =
-                              hasRounds && standings[0]?.player.id === p.id;
                             return html`<td
-                              class=${isLeader ? 'leader-cell' : ''}
+                              class=${score === roundLow ? 'leader-cell' : ''}
                             >
                               ${score}
                             </td>`;
@@ -302,12 +304,16 @@ export class UnoGame extends LitElement {
                             </button>
                           </td>
                         </tr>
-                      `
-                    )}
+                      `;
+                    })}
                   </tbody>
                 </table>
-              </div>
-            `}
+              `}
+          <button class="add-round-button" @click=${this.openAddRound}>
+            <span class="add-round-icon" aria-hidden="true">+</span>
+            Add round
+          </button>
+        </div>
       </section>
 
       <dialog

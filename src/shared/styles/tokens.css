@@ -23,7 +23,6 @@
   /* Type */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
-  --font-display: ui-rounded, "SF Pro Rounded", var(--font-sans);
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
   --font-size-lg: 1.25rem;
