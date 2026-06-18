@@ -171,14 +171,6 @@ export class UnoGame extends LitElement {
       <section class="standings-section">
         <div class="section-header">
           <span class="section-title">Standings</span>
-          <button
-            class="icon-button"
-            aria-label="Add player"
-            title="Add player"
-            @click=${this.addPlayer}
-          >
-            +
-          </button>
         </div>
 
         <div class="standings-card">
@@ -252,6 +244,10 @@ export class UnoGame extends LitElement {
             })}
             </tbody>
           </table>
+          <button class="add-row-button" @click=${this.addPlayer}>
+            <span class="add-row-icon" aria-hidden="true">+</span>
+            Add player
+          </button>
         </div>
       </section>
 
@@ -309,8 +305,8 @@ export class UnoGame extends LitElement {
                   </tbody>
                 </table>
               `}
-          <button class="add-round-button" @click=${this.openAddRound}>
-            <span class="add-round-icon" aria-hidden="true">+</span>
+          <button class="add-row-button" @click=${this.openAddRound}>
+            <span class="add-row-icon" aria-hidden="true">+</span>
             Add round
           </button>
         </div>
